@@ -14,9 +14,10 @@ from StereoFlouroscopyRegistration.io.read_image import get_itk_image_type
 import numpy as np
 import scipy as sp
 import scipy.stats
+#%%
 
 def dicom_reader(input_dicom_directory,verbose):
-        
+    #%%
     # Check that the input exists
     if not os.path.isdir(input_dicom_directory):
         os.sys.exit('Input \"{}\" is not a directory. Exiting...'.format(input_dicom_directory))
@@ -38,8 +39,11 @@ def dicom_reader(input_dicom_directory,verbose):
     
     # Determine pixel type and read in stack
     print('Reading DICOM files into a stack')
-    image_type = get_itk_image_type(input_file_names[0])
-    reader = itk.ImageSeriesReader[image_type].New()
+    # image_type = get_itk_image_type(input_file_names[0]) # it seems that the dicom reader doesn't work with the double data type. perhaps due to the large data size. Float, and short seemed to lead to the same resutls so short was selected.
+    image_type = itk.Image[itk.F,3]
+    #%%
+    ReaderType = itk.ImageSeriesReader[image_type]
+    reader = ReaderType.New()
     dicomIO = itk.GDCMImageIO.New()
     reader.SetImageIO(dicomIO)
     reader.SetFileNames(input_file_names)
@@ -55,9 +59,10 @@ def dicom_reader(input_dicom_directory,verbose):
     if verbose:
         print("Read image information are as follows:\n")
         print(reader.GetOutput())
-        
+    itk.imwrite(reader.GetOutput(),'/Volumes/Storage/Payam/Desktop/bob.nii')
+#%%
     return reader
-
+#%%
 def dicom_writer(image,output_file_name,force):
     # Check if the output exists, prompt to overwrite
     if not force:
