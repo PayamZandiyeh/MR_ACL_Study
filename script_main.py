@@ -32,37 +32,37 @@ output_file_name = "/Volumes/Storage/Payam/Desktop/seg_vol.nii" # The output ima
 force = True
 verbose = True
 #%% reading the dicom image
-mask  = dfun.dicom_reader(input_dicom_directory=input_dicom_mask_directory,verbose=verbose) # get the image pointer
-image = dfun.dicom_reader(input_dicom_directory=input_dicom_image_directory,verbose=verbose) # get the image pointer
+maskReader  = dfun.dicom_reader(input_dicom_directory=input_dicom_mask_directory,verbose=verbose) # get the image pointer
+imageReader = dfun.dicom_reader(input_dicom_directory=input_dicom_image_directory,verbose=verbose) # get the image pointer
 #%% printing the information of the image and mask
 if verbose:
     print("Mask Information: \n") 
-    print(mask)
+    print(maskReader)
     print("\n\n\n\n\n\n\n")
     print("Original Volume Information: \n")
-    print(image)
+    print(imageReader)
     
 #%% converting the mask to binary
-InputImageType = get_itk_image_type(mask.GetFileNames()[0]) # Getting the pixel type
-OutputImageType = get_itk_image_type(mask.GetFileNames()[0]) # Setting the output pixel type
+InputImageType = get_itk_image_type(maskReader.GetFileNames()[0]) # Getting the pixel type
+OutputImageType = get_itk_image_type(maskReader.GetFileNames()[0]) # Setting the output pixel type
 
 BinaryThresholdFilterType = itk.BinaryThresholdImageFilter[InputImageType,OutputImageType]
 bwfilter = BinaryThresholdFilterType.New() # Setting the binary filter.
-bwfilter.SetInput(mask.GetOutput()) # Setting the inputs of the filter.
+bwfilter.SetInput(maskReader.GetOutput()) # Setting the inputs of the filter.
 bwfilter.SetOutsideValue(0) # setting the value for the outside the range
 bwfilter.SetInsideValue(1)
 bwfilter.SetLowerThreshold(700)
 bwfilter.SetUpperThreshold(800)
 bwfilter.Update()
-#%% convolve the mask to an image
+#%% Apply the mask to the image
 buff = itk.GetArrayFromImage(bwfilter.GetOutput()) # Casting the image pixels to a numpy array
 bwfilter_array = buff.copy() # getting the image into a matrix format. 
 
-buff = itk.GetArrayFromImage(image.GetOutput())
+buff = itk.GetArrayFromImage(imageReader.GetOutput())
 image_array = buff.copy() # getting a copy of the image into a matrix format. 
 
 masked_image_array = np.multiply(image_array,bwfilter_array) # multiply the image with the mask
-#%%
+#%% Calculate the image statistics
 data = image_array[np.nonzero(bwfilter_array)] # select the non-zero elements of the 
 
 output_mean,output_ci_low,output_ci_up = dfun.mean_confidence_interval(data)
@@ -72,9 +72,21 @@ output_max  = np.max(data )
 
 output = [output_mean,output_std,output_min,output_max,output_ci_low,output_ci_up] # confidence interval doesn't make sense
 
+#%% Convert the images back to an itk image.
 image2 = itk.GetImageFromArray(masked_image_array)
+
+#%% Apply the image mask to an image. 
+InputImageType = dfun.get_itk_image_type(imageReader.GetFileNames()[0])
+MaskFilterType = itk.MaskImageFilter[InputImageType,InputImageType,InputImageType]
+maskFilter = MaskFilterType.New()
+
+maskFilter.SetInput(imageReader.GetOutput())
+maskFilter.SetMaskImage(maskReader.GetOutput())
+
+#%% Apply the negative image filter to see if this works
+
 #%% Write out
-final_image = image2# the image to be written
+final_image = maskFilter.GetOutput()# the image to be written
 
 
 print('Writing to {}'.format(output_file_name))
