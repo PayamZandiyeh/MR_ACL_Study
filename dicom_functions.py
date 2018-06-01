@@ -52,7 +52,10 @@ def dicom_reader(input_dicom_directory,verbose):
         print("ERROR: ExceptionObject cauth! \n")
         print(ValueError)
         sys.exit()
-    
+    if verbose:
+        print("Read image information are as follows:\n")
+        print(reader.GetOutput())
+        
     return reader
 
 def dicom_writer(image,output_file_name,force):
