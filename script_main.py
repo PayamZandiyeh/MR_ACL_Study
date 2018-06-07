@@ -25,8 +25,8 @@ from StereoFlouroscopyRegistration.io.read_image import get_itk_image_type
 import dicom_functions as dfun
 import numpy as np
 #%% inputs
-input_dicom_mask_directory = "/Volumes/Tashman Lab/SegmentedVolume" # the name of directory to read the volume from
-input_dicom_image_directory = "/Volumes/Tashman Lab/OriginalVolume" # the name of directory to read the volume from
+input_dicom_mask_directory = "/Volumes/ms_orth/example_1/SegmentedVolume" # the name of directory to read the volume from
+input_dicom_image_directory = "/Volumes/ms_orth/example_1/OriginalVolume_ver1" # the name of directory to read the volume from
 
 output_file_name = "/Volumes/Storage/Payam/Desktop/seg_vol.nii" # The output image location.
 force = True
@@ -41,10 +41,12 @@ if verbose:
     print("\n\n\n\n\n\n\n")
     print("Original Volume Information: \n")
     print(imageReader)
-    
+mask = maskReader.GetOutput()
+image= imageReader.GetOutput()
+
 #%% converting the mask to binary
-InputImageType = get_itk_image_type(maskReader.GetFileNames()[0]) # Getting the pixel type
-OutputImageType = get_itk_image_type(maskReader.GetFileNames()[0]) # Setting the output pixel type
+InputImageType = itk.Image[itk.F,3] # Getting the pixel type
+OutputImageType = itk.Image[itk.F,3] # Setting the output pixel type
 
 BinaryThresholdFilterType = itk.BinaryThresholdImageFilter[InputImageType,OutputImageType]
 bwfilter = BinaryThresholdFilterType.New() # Setting the binary filter.
