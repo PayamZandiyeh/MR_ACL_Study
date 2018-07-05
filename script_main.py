@@ -21,7 +21,6 @@ This script will order all the DICOM images in <input_dicom_directory>
 #%% import the libraries
 
 import itk
-from StereoFlouroscopyRegistration.io.read_image import get_itk_image_type
 import dicom_functions as dfun
 import numpy as np
 #%% inputs
