@@ -66,6 +66,27 @@ maskFilter = MaskFilterType.New()
 
 
 
+#%% 
+
+#%% Apply the image mask to an image. 
+InputImageType = dfun.get_itk_image_type(imageReader.GetFileNames()[0])
+MaskFilterType = itk.MaskImageFilter[InputImageType,InputImageType,InputImageType]
+maskFilter = MaskFilterType.New()
+
+maskFilter.SetInput(imageReader.GetOutput())
+maskFilter.SetMaskImage(maskReader.GetOutput())
+
+#%% Apply the negative image filter to see if this works
+
+#%% Write out
+final_image = maskFilter.GetOutput()# the image to be written
+
+
+print('Writing to {}'.format(output_file_name))
+itk.imwrite(final_image, str(output_file_name))
+print('finished')
+
+
 
 
 

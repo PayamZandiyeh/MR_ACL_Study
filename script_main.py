@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
 """
 Created on Wed May 30 11:23:54 2018
 
@@ -24,12 +22,13 @@ import itk
 import dicom_functions as dfun
 import numpy as np
 #%% inputs
-input_dicom_mask_directory = "/Volumes/ms_orth/example_1/SegmentedVolume" # the name of directory to read the volume from
-input_dicom_image_directory = "/Volumes/ms_orth/example_1/OriginalVolume_ver1" # the name of directory to read the volume from
+input_dicom_mask_directory = '/Volumes/ms_orth-2/payam/prepared_for_code_analysis/wats_mid/mask/' # the name of directory to read the volume from
+input_dicom_image_directory = '/Volumes/ms_orth-2/payam/prepared_for_code_analysis/image_wats_no_mask/' # the name of directory to read the volume from
 
-output_file_name = "/Volumes/Storage/Payam/Desktop/seg_vol.nii" # The output image location.
+output_file_name = '/Volumes/ms_orth-2/payam/prepared_for_code_analysis/wats_mid/image/seg_vol.nii' # The output image location.
 force = True
 verbose = True
+write_vols = True
 #%% reading the dicom image
 maskReader  = dfun.dicom_reader(input_dicom_directory=input_dicom_mask_directory,verbose=verbose) # get the image pointer
 imageReader = dfun.dicom_reader(input_dicom_directory=input_dicom_image_directory,verbose=verbose) # get the image pointer
@@ -43,17 +42,35 @@ if verbose:
 mask = maskReader.GetOutput()
 image= imageReader.GetOutput()
 
-#%% converting the mask to binary
+if write_vols:
+    itk.imwrite(image,input_dicom_image_directory+'image.nii')
+    itk.imwrite(mask,input_dicom_mask_directory+'mask.nii')
+    
+#%% finding the min and max of the mask
 InputImageType = itk.Image[itk.F,3] # Getting the pixel type
 OutputImageType = itk.Image[itk.F,3] # Setting the output pixel type
+
+MinMaxFilterType = itk.MinimumMaximumImageFilter[InputImageType] # initiate min-max image filter
+minmaxfilter = MinMaxFilterType.New()
+minmaxfilter.SetInput(mask)
+minmaxfilter.Update()
+
+low_thresh = minmaxfilter.GetMinimum()
+up_thresh  = minmaxfilter.GetMaximum()
+mid_thresh = (low_thresh+up_thresh)/2.0
+
+# visual inspection and histogram assessment of the mask indicates that the mask region is located between low threshold to mid_threshold region. 
+
+#%% converting the mask to binary
+
 
 BinaryThresholdFilterType = itk.BinaryThresholdImageFilter[InputImageType,OutputImageType]
 bwfilter = BinaryThresholdFilterType.New() # Setting the binary filter.
 bwfilter.SetInput(maskReader.GetOutput()) # Setting the inputs of the filter.
-bwfilter.SetOutsideValue(0) # setting the value for the outside the range
-bwfilter.SetInsideValue(1)
-bwfilter.SetLowerThreshold(700)
-bwfilter.SetUpperThreshold(800)
+bwfilter.SetOutsideValue(0) # setting the value for the outside the range.
+bwfilter.SetInsideValue(1)  # Setting the value for the inside the range. 
+bwfilter.SetLowerThreshold(low_thresh)
+bwfilter.SetUpperThreshold(mid_thresh)
 bwfilter.Update()
 #%% Apply the mask to the image
 buff = itk.GetArrayFromImage(bwfilter.GetOutput()) # Casting the image pixels to a numpy array
@@ -74,22 +91,8 @@ output_max  = np.max(data )
 output = [output_mean,output_std,output_min,output_max,output_ci_low,output_ci_up] # confidence interval doesn't make sense
 
 #%% Convert the images back to an itk image.
-image2 = itk.GetImageFromArray(masked_image_array)
+seg_vol = itk.GetImageFromArray(masked_image_array)
 
-#%% Apply the image mask to an image. 
-InputImageType = dfun.get_itk_image_type(imageReader.GetFileNames()[0])
-MaskFilterType = itk.MaskImageFilter[InputImageType,InputImageType,InputImageType]
-maskFilter = MaskFilterType.New()
-
-maskFilter.SetInput(imageReader.GetOutput())
-maskFilter.SetMaskImage(maskReader.GetOutput())
-
-#%% Apply the negative image filter to see if this works
-
-#%% Write out
-final_image = maskFilter.GetOutput()# the image to be written
-
-
-print('Writing to {}'.format(output_file_name))
-itk.imwrite(final_image, str(output_file_name))
-print('finished')
+#%% write the masked region image 3d to the desired location. 
+if write_vols:
+    itk.imwrite(seg_vol,output_file_name)
